@@ -12,15 +12,10 @@
 </head>
 <body>
   <main class="game" aria-label="Juego Verano Divertido">
-    <!-- PANTALLA DE CARGA: aparece al abrir el juego -->
-    <section id="loading" class="screen is-active" aria-label="Cargando el juego">
-      <div class="loading-bg"></div>
+    <!-- PANTALLA DE CARGA ORIGINAL: usa cargando.png sin barra -->
+    <section id="loading" class="screen is-active loading-screen" aria-label="Cargando juego">
       <div class="loading-inner">
-        <div class="loading-sun">☀️</div>
-        <h1 class="loading-title"><span>VERANO</span><span>DIVERTIDO</span></h1>
-        <div class="loading-cats" aria-hidden="true">🐈 <span class="loading-splash">💦</span> 🐈‍⬛</div>
-        <p class="loading-message">🌴 ¡Preparando las bombuchas! 🎈</p>
-        <div class="loading-track"><div class="loading-progress"></div></div>
+        <img src="cargando.png" alt="Tom persigue a Misty" class="loading-img">
       </div>
     </section>
 
@@ -57,14 +52,11 @@
     <section id="result" class="screen" aria-label="Tu premio" hidden>
       <img class="full-art" src="inicio.png" alt="Fondo de verano">
       <div class="result-content">
-        <p class="eyebrow">🌴☀️ ¡VERANO DIVERTIDO! 💦🎈</p>
-        <h1 id="resultTitle">🎉 ¡QUÉ BUENA ELECCIÓN! 🥳</h1>
-        <p class="summer-message">¡Tu bombucha explotó de alegría y te llevaste un premio! 🎁✨</p>
+        <h1 class="victory-heading">🌞🎉 ¡FELICIDADES! 🎈</h1>
+        <p class="victory-description">💦 ¡Elegiste tu bombucha y la suerte te acompañó!</p>
+        <p id="chosenBalloon" class="victory-balloon"></p>
         <p id="resultPrize" class="prize"></p>
-        <p class="summer-message">🌊🍉 ¡El verano está lleno de sorpresas y esta vez la suerte estuvo de tu lado!</p>
-        <p id="resultNotice" class="result-notice"></p>
         <button id="claimBtn" type="button" class="action-button">🎁 RECLAMAR PREMIO</button>
-        <button id="backBtn" type="button" class="secondary-button">VOLVER AL INICIO</button>
       </div>
     </section>
 
@@ -77,7 +69,6 @@
         <p id="lockedPrize" class="prize"></p>
         <p>☀️ Podés volver a reclamar tu premio por WhatsApp.</p>
         <button id="lockedClaimBtn" type="button" class="action-button">🎁 RECLAMAR MI PREMIO</button>
-        <button id="lockedBackBtn" type="button" class="secondary-button">VOLVER AL INICIO</button>
       </div>
     </section>
   </main>
@@ -94,6 +85,7 @@
         { label: '15% de bono', phone: '5491162804382' },  // Violeta
         { label: '20% de bono', phone: '5491162804382' }   // Rosa
       ];
+      const balloonColors = ['rojo 🔴', 'azul 🔵', 'verde 🟢', 'amarillo 🟡', 'violeta 🟣', 'rosa 🩷'];
       const screens = [...document.querySelectorAll('.screen')];
       const $ = (id) => document.getElementById(id);
       let current = null;
@@ -137,14 +129,18 @@
         window.location.href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
       }
       function showLocked(idx) {
+        // Si ya participó, mostrar su victoria guardada sin permitir elegir otro globo.
         current = idx;
-        $('lockedPrize').textContent = `🏆 ¡GANASTE ${prizes[idx].label.toUpperCase()}! 🎁`;
-        show('locked');
+        $('chosenBalloon').textContent = `🎈 El globo que elegiste: ${balloonColors[idx]}`;
+        $('resultPrize').textContent = `🏆 ¡GANASTE ${prizes[idx].label.toUpperCase()}! 🎁`;
+        show('result');
       }
       function openGame() {
         const saved = readSaved();
         if (saved !== null) return showLocked(saved);
-        show('choose');
+        // Igual que el juego original: vuelve a mostrar cargando.png antes de elegir.
+        show('loading');
+        setTimeout(() => show('choose'), 900);
       }
       function choose(index) {
         if (readSaved() !== null) return showLocked(readSaved());
@@ -152,16 +148,14 @@
         // Guarda antes de mostrar el premio para bloquear una segunda elección.
         save(index);
         current = index;
+        $('chosenBalloon').textContent = `🎈 El globo que elegiste: ${balloonColors[index]}`;
         $('resultPrize').textContent = `🏆 ¡GANASTE ${prizes[index].label.toUpperCase()}! 🎁`;
-        $('resultNotice').textContent = prizes[index].label.includes('bono')
-          ? 'Una plataforma, una carga y un número. Debés duplicar tu carga. Bonificación máxima $30.000. No válido para ruleta.'
-          : '¡Reclamá tu premio por WhatsApp!';
         show('result');
       }
 
-      // Pantalla de carga de inicio (mínimo 2,3 segundos).
+      // Pantalla de carga de inicio (mínimo 1,8 segundos).
       const startTime = Date.now();
-      const preloadPaths = ['inicio.png', 'eleccion.png', 'titulo.png', 'play.png', 'cartel.png'];
+      const preloadPaths = ['cargando.png', 'inicio.png', 'eleccion.png', 'titulo.png', 'play.png', 'cartel.png'];
       const preloads = preloadPaths.map(src => new Promise(resolve => {
         const img = new Image();
         img.onload = resolve;
@@ -169,7 +163,7 @@
         img.src = src;
       }));
       Promise.all(preloads).then(() => {
-        const remaining = Math.max(0, 2300 - (Date.now() - startTime));
+        const remaining = Math.max(0, 1800 - (Date.now() - startTime));
         setTimeout(() => show('home'), remaining);
       });
       // Respaldo en caso de que la descarga de algún recurso se bloquee.
@@ -183,8 +177,6 @@
       });
       $('claimBtn').addEventListener('click', claim);
       $('lockedClaimBtn').addEventListener('click', claim);
-      $('backBtn').addEventListener('click', () => show('home'));
-      $('lockedBackBtn').addEventListener('click', () => show('home'));
     })();
   </script>
 </body>
