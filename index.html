@@ -12,10 +12,25 @@
 </head>
 <body>
   <main class="game" aria-label="Juego Verano Divertido">
+    <!-- PANTALLA DE CARGA: aparece al abrir el juego -->
+    <section id="loading" class="screen is-active" aria-label="Cargando el juego">
+      <div class="loading-bg"></div>
+      <div class="loading-inner">
+        <div class="loading-sun">☀️</div>
+        <h1 class="loading-title"><span>VERANO</span><span>DIVERTIDO</span></h1>
+        <div class="loading-cats" aria-hidden="true">🐈 <span class="loading-splash">💦</span> 🐈‍⬛</div>
+        <p class="loading-message">🌴 ¡Preparando las bombuchas! 🎈</p>
+        <div class="loading-track"><div class="loading-progress"></div></div>
+      </div>
+    </section>
+
     <!-- PANTALLA DE INICIO -->
-    <section id="home" class="screen is-active" aria-label="Inicio">
+    <section id="home" class="screen" aria-label="Inicio" hidden>
       <img class="full-art" src="inicio.png" alt="Verano con Tom y Misty">
-      <img class="game-title" src="titulo.png" alt="Verano Divertido">
+      <div class="title-container">
+        <img class="game-title" src="titulo.png" alt="Verano Divertido" onerror="this.hidden=true;this.nextElementSibling.hidden=false">
+        <div class="title-fallback" hidden><span>VERANO</span><span>DIVERTIDO</span></div>
+      </div>
       <button id="playBtn" class="play-button" type="button" aria-label="Jugar">
         <img src="play.png" alt="JUGAR" onerror="this.hidden=true;this.parentElement.classList.add('text-play')">
         <span class="play-text">JUGAR</span>
@@ -143,6 +158,24 @@
           : '¡Reclamá tu premio por WhatsApp!';
         show('result');
       }
+
+      // Pantalla de carga de inicio (mínimo 2,3 segundos).
+      const startTime = Date.now();
+      const preloadPaths = ['inicio.png', 'eleccion.png', 'titulo.png', 'play.png', 'cartel.png'];
+      const preloads = preloadPaths.map(src => new Promise(resolve => {
+        const img = new Image();
+        img.onload = resolve;
+        img.onerror = resolve;
+        img.src = src;
+      }));
+      Promise.all(preloads).then(() => {
+        const remaining = Math.max(0, 2300 - (Date.now() - startTime));
+        setTimeout(() => show('home'), remaining);
+      });
+      // Respaldo en caso de que la descarga de algún recurso se bloquee.
+      setTimeout(() => {
+        if (!$('loading').hidden) show('home');
+      }, 6500);
 
       $('playBtn').addEventListener('click', openGame);
       document.querySelectorAll('.balloon-hit').forEach((button) => {
