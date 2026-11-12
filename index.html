@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <meta name="theme-color" content="#24b7ed">
+  <title>Verano Divertido | Tom y Misty</title>
+  <link rel="preload" as="image" href="inicio.png">
+  <link rel="preload" as="image" href="eleccion.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game" aria-label="Verano Divertido, el juego de Tom y Misty">
+    <section id="home" class="screen" aria-label="Inicio">
+      <img class="full-art" src="inicio.png" alt="Tom mojado persigue a Misty por el jardín">
+      <div class="sun-glints" aria-hidden="true"></div>
+      <img class="game-title" src="titulo.png" alt="Verano Divertido">
+      <button id="playBtn" class="image-button" aria-label="Jugar"><img src="play.png" alt="PLAY" onerror="this.style.display='none'"><span class="play-fallback">▶ JUGAR</span></button>
+      <p class="signature">COMUNIDAD TOM × COMUNIDAD MISTY</p>
+    </section>
+
+    <section id="loading" class="screen active loading-screen" aria-label="Cargando juego">
+      <div class="loading-inner"><img src="cargando.png" alt="Cargando..." class="loading-img"><div class="loading-line"><span></span></div></div>
+    </section>
+
+
+    <section id="choice" class="screen" aria-label="Elegí una bombucha">
+      <img class="full-art" src="eleccion.png" alt="Misty elige entre seis bombuchas mientras Tom descansa en la pileta">
+      <div class="sign-drop"><img class="choice-sign" src="cartel.png" alt="¿Cuál globo vas a elegir?"></div>
+      <div class="balloon-buttons" role="group" aria-label="Seis globos de agua">
+        <button data-balloon="0" style="--x:20.5%;--y:47.0%" aria-label="Elegir bombucha roja"></button>
+        <button data-balloon="1" style="--x:50.0%;--y:47.0%" aria-label="Elegir bombucha azul"></button>
+        <button data-balloon="2" style="--x:79.5%;--y:47.0%" aria-label="Elegir bombucha verde"></button>
+        <button data-balloon="3" style="--x:20.5%;--y:59.5%" aria-label="Elegir bombucha amarilla"></button>
+        <button data-balloon="4" style="--x:50.0%;--y:59.5%" aria-label="Elegir bombucha violeta"></button>
+        <button data-balloon="5" style="--x:79.5%;--y:59.5%" aria-label="Elegir bombucha rosa"></button>
+      </div>
+      <p class="bottom-hint">TOCÁ UNA BOMBUCHA <span>💦</span></p>
+    </section>
+
+    <section id="result" class="screen" aria-label="Tu recompensa">
+      <img class="full-art" src="final.png" alt="Tom está mojado y Misty se ríe mientras corre">
+      <div class="result-shade"></div>
+      <article class="prize-card">
+        <div class="prize-top">🌞 ¡QUÉ TRAVESURA, MISTY! 💦</div>
+        <h1>¡FELICIDADES!</h1>
+        <p>Elegiste la bombucha <b id="prizeColor">AZUL</b></p>
+        <div class="prize-percent" id="prizeAmount">500 FICHAS</div>
+        <p class="prize-sub" id="prizeType">DE PREMIO</p>
+        <button id="claimBtn" class="claim-btn">🎁 RECLAMAR PREMIO</button>
+        <p class="conditions">Una plataforma, una carga y un número. Para bonos porcentuales, tope de bonificación: $30.000. No válido para ruleta. Pedí antes de transferir.</p>
+        <p id="claimNotice" class="claim-notice" role="status"></p>
+      </article>
+    </section>
+
+    <section id="alreadyPlayed" class="screen" aria-label="Ya participaste">
+      <img class="full-art" src="inicio.png" alt="Tom y Misty en el jardín">
+      <div class="played-shade"></div>
+      <article class="played-message">
+        <h1>🐱 ¡YA PARTICIPASTE! 💦</h1>
+        <p>Este juego permite una sola oportunidad por navegador.</p>
+        <p>¡Gracias por jugar con Tom y Misty! 🌞</p>
+        <button id="viewPrizeBtn" class="claim-btn" hidden>🎁 VER MI PREMIO</button>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const PREMIOS = [
+      {color:'ROJA',premio:'10%',tipo:'DE BONIFICACIÓN',hex:'#f9434b',whatsapp:'5491162804365'},
+      {color:'AZUL',premio:'500 FICHAS',tipo:'DE PREMIO',hex:'#149ff2',whatsapp:'5491160355667'},
+      {color:'VERDE',premio:'1000 FICHAS',tipo:'DE PREMIO',hex:'#35d341',whatsapp:'5491154810152'},
+      {color:'AMARILLA',premio:'25%',tipo:'DE BONIFICACIÓN',hex:'#ffd337',whatsapp:'5491154810138'},
+      {color:'VIOLETA',premio:'15%',tipo:'DE BONIFICACIÓN',hex:'#ab4cff',whatsapp:'5491162804382'},
+      {color:'ROSA',premio:'20%',tipo:'DE BONIFICACIÓN',hex:'#ff5eb4',whatsapp:'5491162804382'}
+    ];
+    const STORAGE_KEY = 'verano_divertido_tom_misty_participacion_v1';
+    const $ = id => document.getElementById(id);
+    const screens = Array.from(document.querySelectorAll('.screen'));
+    const balloonButtons = Array.from(document.querySelectorAll('[data-balloon]'));
+    let busy = false;
+    let selected = null;
+    let memoryParticipation = null;
+
+    function readParticipation(){
+      try {
+        const value = localStorage.getItem(STORAGE_KEY);
+        if(value !== null) return JSON.parse(value);
+      } catch(e) {}
+      return memoryParticipation;
+    }
+    function saveParticipation(index){
+      const record = {balloon:index, date:new Date().toISOString()};
+      memoryParticipation = record;
+      try {localStorage.setItem(STORAGE_KEY,JSON.stringify(record));} catch(e) {}
+    }
+    function screen(id){screens.forEach(s=>s.classList.toggle('active',s.id===id));}
+    function showAlreadyPlayed(){
+      const record = readParticipation();
+      $('viewPrizeBtn').hidden = !(record && Number.isInteger(record.balloon) && PREMIOS[record.balloon]);
+      screen('alreadyPlayed');
+    }
+    function showPrize(index){
+      const p = PREMIOS[index];
+      if(!p) return;
+      selected = index;
+      $('prizeColor').textContent = p.color;
+      $('prizeColor').style.color = p.hex;
+      $('prizeAmount').textContent = p.premio;
+      $('prizeAmount').classList.toggle('fichas',p.premio.includes('FICHAS'));
+      $('prizeType').textContent = p.tipo;
+      $('claimNotice').textContent = '';
+      screen('result');
+    }
+    function start(){
+      if(busy) return;
+      if(readParticipation()) {showAlreadyPlayed();return;}
+      balloonButtons.forEach(b=>b.disabled=false);
+      screen('choice');
+    }
+
+    $('playBtn').addEventListener('click',start);
+    balloonButtons.forEach(button=>button.addEventListener('click',()=>{
+      if(busy || readParticipation()) {if(readParticipation()) showAlreadyPlayed();return;}
+      busy = true;
+      balloonButtons.forEach(b=>b.disabled=true);
+      const index = Number(button.dataset.balloon);
+      // Registrar ANTES de mostrar el premio, incluso si se recarga la página.
+      saveParticipation(index);
+      // Sin cinemática ni espera final: se muestra el resultado directamente.
+      showPrize(index);
+    }));
+    $('viewPrizeBtn').addEventListener('click',()=>{
+      const record = readParticipation();
+      if(record && PREMIOS[record.balloon]) showPrize(record.balloon);
+    });
+    $('claimBtn').addEventListener('click',()=>{
+      if(selected === null) return;
+      const p = PREMIOS[selected];
+      const msg = `¡Hola! Jugué Verano Divertido de Comunidad Tom y Misty. Elegí la bombucha ${p.color} y gané ${p.premio}. Quiero reclamar mi premio.`;
+      window.open(`https://wa.me/${p.whatsapp}?text=${encodeURIComponent(msg)}`,'_blank','noopener,noreferrer');
+    });
+
+    const bootImages = ['inicio.png','titulo.png','play.png','eleccion.png','cartel.png','final.png'];
+    const loadAssets = Promise.all(bootImages.map(src=>new Promise(resolve=>{
+      const img = new Image();
+      img.onload = resolve;
+      img.onerror = resolve;
+      img.src = src;
+    })));
+    const minLoading = new Promise(resolve=>setTimeout(resolve,1800));
+    Promise.all([loadAssets,minLoading]).then(()=>{
+      if(readParticipation()) showAlreadyPlayed();
+      else screen('home');
+    });
+  </script>
+</body>
+</html>
